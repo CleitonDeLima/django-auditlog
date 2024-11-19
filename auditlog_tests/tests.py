@@ -16,6 +16,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.contenttypes.models import ContentType
 from django.core import management
+from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.db.models import JSONField, Value
 from django.db.models.functions import Now
@@ -44,6 +45,7 @@ from auditlog_tests.models import (
     CharfieldTextfieldModel,
     ChoicesFieldModel,
     CustomLogEntryModel,
+    CustomLogEntryModelWithExtraFields,
     DateTimeFieldModel,
     JSONModel,
     ManyRelatedModel,
@@ -1246,7 +1248,7 @@ class RegisterModelSettingsTest(TestCase):
 
         self.assertTrue(self.test_auditlog.contains(SimpleExcludeModel))
         self.assertTrue(self.test_auditlog.contains(ChoicesFieldModel))
-        self.assertEqual(len(self.test_auditlog.get_models()), 28)
+        self.assertEqual(len(self.test_auditlog.get_models()), 29)
 
     def test_register_models_register_model_with_attrs(self):
         self.test_auditlog._register_models(
@@ -2740,9 +2742,34 @@ class MissingModelTest(TestCase):
 
 
 class SwappableLogEntryModelTest(TestCase):
-
     @override_settings(AUDITLOG_LOGENTRY_MODEL="auditlog_tests.CustomLogEntryModel")
     def test_custom_log_entry_model(self):
         self.assertEqual(get_logentry_model(), CustomLogEntryModel)
         SimpleModel.objects.create(text="Hi!")
         self.assertEqual(CustomLogEntryModel.objects.count(), 1)
+
+    @override_settings(
+        AUDITLOG_LOGENTRY_MODEL="auditlog_tests.CustomLogEntryModelWithExtraFields"
+    )
+    def test_custom_log_entry_model_with_extra_fields(self):
+        self.assertEqual(get_logentry_model(), CustomLogEntryModelWithExtraFields)
+        SimpleModel.objects.create(text="Hi!")
+        self.assertEqual(CustomLogEntryModelWithExtraFields.objects.count(), 1)
+        self.assertEqual(
+            CustomLogEntryModelWithExtraFields.objects.first().extra_field, "atestvalue"
+        )
+        self.assertEqual(
+            CustomLogEntryModelWithExtraFields.objects.first().extra_field2, None
+        )
+
+    @override_settings(AUDITLOG_LOGENTRY_MODEL="definitelynotamodelpath<%$>")
+    def test_config_error_bad_model_path(self):
+        with self.assertRaises(ImproperlyConfigured):
+            _never = get_logentry_model()
+
+    @override_settings(
+        AUDITLOG_LOGENTRY_MODEL="auditlog_tests.CustomLogEntryModelThatIsntPresent"
+    )
+    def test_config_error_missing_model(self):
+        with self.assertRaises(ImproperlyConfigured):
+            _never = get_logentry_model()

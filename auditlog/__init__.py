@@ -7,7 +7,7 @@ from django.apps import apps as django_apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no_cover
     from auditlog.models import AbstractLogEntry
 
 __version__ = version("django-auditlog")
