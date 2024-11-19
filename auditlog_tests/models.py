@@ -360,6 +360,11 @@ class CustomLogEntryModel(AbstractLogEntry):
     pass
 
 
+class CustomLogEntryModelWithExtraFields(AbstractLogEntry):
+    extra_field = models.CharField(default="atestvalue")
+    extra_field2 = models.CharField(null=True, blank=True)
+
+
 auditlog.register(AltPrimaryKeyModel)
 auditlog.register(UUIDPrimaryKeyModel)
 auditlog.register(ModelPrimaryKeyModel)
